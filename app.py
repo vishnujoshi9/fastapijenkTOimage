@@ -6,7 +6,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"Hello": "Narsimha ch"}
+    return {"Hello": "07-02-2024 hello world"}
 
 handler = mangum.Mangum(app)
 
