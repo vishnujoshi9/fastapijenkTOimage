@@ -6,11 +6,11 @@ app = FastAPI()
 # comment
 @app.get("/")
 def read_root():
-    return {"Hello": "07-02-2024 hello world"}
+    return {"Hello": "Digital Team"}
 
 @app.get("/jenkins")
 def read_root():
-    return {"Hello": "14-02-2024 hello world"}
+    return {"Hello": "Venkatesh Team"}
 
 handler = mangum.Mangum(app)
 
