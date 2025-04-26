@@ -1,42 +1,36 @@
-name: Build and publish a Docker image
+name: CICD
 
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - '*'
+    branches: [deploy-to-ec2]
 
 jobs:
   build:
-    name: Build & push docker image
-    runs-on: ubuntu-latest
-    env:
-      IMG_NAME: ${{ github.repository }}
+    runs-on: [ubuntu-latest]
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v3
-
-      - name: Debug
-        run: echo "github.ref -> ${{ github.ref }}"
-
-      - name: Docker metadata
-        id: metadata
-        uses: docker/metadata-action@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          images: ${{ env.IMG_NAME }}
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Build Project
+        run: mvn clean install -DskipTests
+      - name: Login to docker hub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+      - name: Build docker image
+        run: docker build -t integrationninjas/springboot-example .
+      - name: Publish image to docker hub
+        run: docker push integrationninjas/springboot-example:latest
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: ${{ github.ref_type == 'tag' && github.ref != 'refs/tags/v0.*' && github.event.base_ref == 'refs/heads/main' }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
+  deploy:
+    needs: build
+    runs-on: [aws-ec2]
+    steps:
+      - name: Pull Image from docker hub
+        run: docker pull integrationninjas/springboot-example:latest
+      - name: Delete old container
+        run: docker rm -f springboot-example-container
+      - name: Run docker container
+        run: docker run -d -p 8080:8080 --name springboot-example-container integrationninjas/springboot-example
